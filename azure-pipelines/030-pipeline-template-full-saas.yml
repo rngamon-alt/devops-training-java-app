@@ -1,0 +1,129 @@
+# Práctica 5 - Azure DevOps (template full SaaS)
+#
+# Este template es una guía (NO solución final).
+# Escenario SaaS:
+# - Docker Hub para imágenes
+# - Azure Artifacts para publicar el .jar (servicio nativo)
+# - Agente Microsoft-hosted (ubuntu-latest)
+
+trigger:
+  branches:
+    include:
+      - "*"
+
+pr:
+  branches:
+    include:
+      - develop
+      - master
+
+parameters:
+  - name: RUN_CD
+    type: boolean
+    default: false
+  - name: ENABLE_REGISTRY_PUSH
+    type: boolean
+    default: true
+  - name: ENABLE_AZURE_ARTIFACTS_UPLOAD
+    type: boolean
+    default: true
+
+variables:
+  # TODO (E2): mover a Variable Group por proyecto
+  - name: IMAGE_REPO
+    value: "contrerasadr/devops-training-java-app"
+  - name: DOCKERHUB_REPO
+    value: "contrerasadr/devops-training-java-app"
+  - name: COMPOSE_FILE
+    value: "docker-compose.yml"
+  - name: COMPOSE_SERVICE
+    value: "app"
+  - name: AZ_ARTIFACTS_FEED
+    value: "devops-java-feed"
+
+stages:
+  - stage: CI
+    displayName: "CI - Lint/Test/Build"
+    jobs:
+      - job: ci_build
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - checkout: self
+          - script: |
+              IMAGE_VERSION=$(cat VERSION)
+              VERSION_JAR="${IMAGE_VERSION}-SNAPSHOT"
+              IMAGE_NAME="$(IMAGE_REPO):${IMAGE_VERSION}"
+              CI_IMAGE="java-ci-tools:$(Build.BuildId)"
+              REGISTRY_IMAGE="$(DOCKERHUB_REPO):${IMAGE_VERSION}"
+
+              echo "TODO (E3): docker build -t ${CI_IMAGE} -f devops/ci.Dockerfile ."
+              echo "TODO (E3): docker run --rm ... ${CI_IMAGE} sh -lc 'make lint'"
+              echo "TODO (E3): docker run --rm ... ${CI_IMAGE} sh -lc 'make test'"
+              echo "TODO (E4): docker build -t ${IMAGE_NAME} --build-arg VERSION=${VERSION_JAR} -f devops/Dockerfile ."
+            displayName: "CI build (TODO)"
+          - task: MavenAuthenticate@0
+            inputs:
+              artifactsFeeds: "$(AZ_ARTIFACTS_FEED)"
+            displayName: "Authenticate Maven against Azure Artifacts (TODO)"
+          - script: |
+              echo "TODO (Opcional B): subir jar a Azure Artifacts"
+              echo "Ejemplo:"
+              echo "  if [ \"${{ parameters.ENABLE_AZURE_ARTIFACTS_UPLOAD }}\" = \"true\" ]; then"
+              echo "    docker run --rm -v \"\$(Build.SourcesDirectory):/app\" -v \"\$HOME/.m2:/root/.m2\" -w /app \${CI_IMAGE} sh -lc \\"
+              echo "      \"mvn -B -DskipTests deploy -DaltDeploymentRepository=azure-artifacts::default::https://pkgs.dev.azure.com/\$(AZ_ARTIFACTS_ORG)/\$(AZ_ARTIFACTS_PROJECT)/_packaging/\$(AZ_ARTIFACTS_FEED)/maven/v1\""
+              echo "  fi"
+            displayName: "Upload jar to Azure Artifacts (TODO)"
+          - script: |
+              echo "TODO (Opcional A): push imagen a Docker Hub"
+              echo "  docker login -u \$DOCKERHUB_USERNAME -p \$DOCKERHUB_PASSWORD"
+              echo "  docker tag ${IMAGE_NAME} ${REGISTRY_IMAGE}"
+              echo "  docker push ${REGISTRY_IMAGE}"
+            displayName: "Push image (TODO)"
+
+  - stage: CD
+    displayName: "CD - Deploy compose"
+    dependsOn: CI
+    condition: and(
+      succeeded(),
+      or(
+        eq(${{ parameters.RUN_CD }}, true),
+        eq(variables['Build.SourceBranchName'], 'develop'),
+        eq(variables['Build.SourceBranchName'], 'master')
+      )
+    )
+    jobs:
+      - job: cd_deploy
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - checkout: self
+          - script: |
+              IMAGE_VERSION=$(cat VERSION)
+              IMAGE_NAME="$(IMAGE_REPO):${IMAGE_VERSION}"
+              REGISTRY_IMAGE="$(DOCKERHUB_REPO):${IMAGE_VERSION}"
+              if [ "$(Build.SourceBranchName)" = "master" ]; then DEPLOY_ENV=PRO; else DEPLOY_ENV=DEV; fi
+              COMPOSE_PROJECT=$(echo "$DEPLOY_ENV" | tr '[:upper:]' '[:lower:]')
+
+              echo "TODO (E6): pull desde Docker Hub o fallback build local"
+              echo "TODO (E6): generar override compose con image + build:null para evitar tocar docker-compose.yml"
+              echo "TODO (E6): docker compose -f $(COMPOSE_FILE) -f docker-compose.cd.yml -p ${COMPOSE_PROJECT} up -d"
+              echo "TODO (E6): docker compose ... logs $(COMPOSE_SERVICE)"
+            displayName: "Deploy (TODO)"
+          - script: |
+              IMAGE_VERSION=$(cat VERSION)
+              IMAGE_NAME="$(IMAGE_REPO):${IMAGE_VERSION}"
+              if [ "$(Build.SourceBranchName)" = "master" ]; then DEPLOY_ENV=PRO; else DEPLOY_ENV=DEV; fi
+              COMPOSE_PROJECT=$(echo "$DEPLOY_ENV" | tr '[:upper:]' '[:lower:]')
+
+              echo "TODO (E6): docker compose down --volumes || true"
+              echo "TODO (E6): docker rmi ${IMAGE_NAME} || true"
+            displayName: "Cleanup (TODO)"
+            condition: always()
+
+# Referencias:
+# - Docker task/login: https://learn.microsoft.com/azure/devops/pipelines/tasks/reference/docker-v2
+# - Maven authenticate task: https://learn.microsoft.com/azure/devops/pipelines/tasks/reference/maven-authenticate-v0
+# - Publish Maven package in Azure Artifacts: https://learn.microsoft.com/azure/devops/artifacts/maven/publish-packages-maven
+# - Conditions: https://learn.microsoft.com/azure/devops/pipelines/process/conditions
+# - Variables/secretos: https://learn.microsoft.com/azure/devops/pipelines/process/variables
