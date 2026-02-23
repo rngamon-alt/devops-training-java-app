@@ -11,6 +11,15 @@ pipeline {
   agent any
 
   stages {
+    stage('Lint') {
+      agent {
+        docker {
+          image 'maven:3.8.6-openjdk-11-slim'
+        }
+      }
+      steps {
+        sh 'make lint'
+      }
     stage('Test') {
       /*
         `agent` dentro de un stage permite que SOLO ese stage se ejecute en un contexto concreto.
