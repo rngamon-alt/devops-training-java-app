@@ -20,6 +20,7 @@ pipeline {
       steps {
         sh 'make lint'
       }
+    }
     stage('Test') {
       /*
         `agent` dentro de un stage permite que SOLO ese stage se ejecute en un contexto concreto.
