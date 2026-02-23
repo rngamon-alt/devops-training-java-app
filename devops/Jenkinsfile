@@ -28,10 +28,10 @@ pipeline {
       }
     }
     stage('Info') {
-       steps {
-         sh 'echo Job: ${env.JOB_NAME}'
-         sh 'echo Build: ${env.BUILD_NUMBER}'
-       }
+      steps {
+        echo "Job: ${env.JOB_NAME}"
+        echo "Build: ${env.BUILD_NUMBER}"
+      }
     }
   }
 }
