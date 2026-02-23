@@ -6,6 +6,14 @@
   hasta construir un pipeline CI/CD completo.
 */
 
+
+// Función para ejecutar cualquier bloque dentro de un contenedor Docker
+def runInDocker(String image, Closure body) {
+    docker.image(image).inside {
+        body()
+    }
+}
+
 pipeline {
   // `agent any` = el pipeline se ejecuta en cualquier nodo/agente disponible.
   agent any
@@ -17,28 +25,21 @@ pipeline {
       }
     }
     stage('Lint') {
-      agent {
-        docker {
-          image 'devops/ci:latest' 
-        }
-      }
       steps {
-        sh 'make lint'
+        script {
+          runInDocker('devops/ci:latest') {
+            sh 'make lint'
+          }
+        }
       }
     }
-    stage('Test') {
-      /*
-        `agent` dentro de un stage permite que SOLO ese stage se ejecute en un contexto concreto.
-        En este caso, usamos Docker como capa de virtualizacion: los comandos se ejecutan dentro
-        de un contenedor temporal.
-      */
-      agent {
-        docker {
-          image 'devops/ci:latest'
-        }
-      }
+    stage('Test') {      
       steps {
-        sh 'mvn test'
+        script {
+          runInDocker('devops/ci:latest') {
+            sh 'mvn test'
+          }
+        }
       }
     }
     stage('Info') {
