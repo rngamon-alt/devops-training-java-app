@@ -17,7 +17,13 @@ def runInDocker(String image, Closure body) {
 pipeline {
   // `agent any` = el pipeline se ejecuta en cualquier nodo/agente disponible.
   agent any
-
+  parameters {
+    booleanParam(name: 'RUN_CD', defaultValue: false, description: 'Ejecutar CD')
+  }
+  environment {
+    IMAGE_NAME = "mi-imagen:${BUILD_NUMBER}"
+    APP_URL    = "http://localhost:5001/"
+  }
   stages {
     stage('Build CI Image') {
       steps {
@@ -42,10 +48,57 @@ pipeline {
         }
       }
     }
+    stage('CD') {
+      when {
+        anyOf {
+          expression { return params.RUN_CD }
+            branch 'develop'
+            branch 'master'
+          }
+        }
+      steps {
+        echo "CD habilitado: RUN_CD=${params.RUN_CD}, branch=${env.BRANCH_NAME}"
+        echo "Deploying image: ${env.IMAGE_NAME}"
+        echo "Application URL: ${env.APP_URL}"
+        script {
+          env.DEPLOY_ENV = (env.BRANCH_NAME == 'master') ? 'PRO' : 'DEV'
+
+          echo "Deploying to ${env.DEPLOY_ENV}"
+          echo "RUN_CD=${params.RUN_CD}, branch=${env.BRANCH_NAME}"
+
+          def composeProject = (env.DEPLOY_ENV == 'PRO') ? 'pro' : 'dev'
+
+          sh "docker compose -p ${composeProject} up -d"
+          sh "sleep 5"
+          sh "docker compose -p ${composeProject} logs app"
+          sh "docker compose -p ${composeProject} down --volumes"
+        }
+        post {
+          always {
+            echo "Cleaning resources..."
+            sh "docker compose -p ${composeProject} down --volumes || true"
+            sh "docker rmi ${IMAGE_NAME} || true"
+          }
+          success {
+            echo "SUCCESS"
+          }
+          failure {
+            echo "FAILURE"
+            sh "docker compose -p ${composeProject} logs || true"
+          }
+        }
+      }
+    }
     stage('Info') {
       steps {
         echo "Job: ${env.JOB_NAME}"
         echo "Build: ${env.BUILD_NUMBER}"
+        
+        echo "Imagen: ${env.IMAGE_NAME}"
+        echo "URL App: ${env.APP_URL}"
+
+        sh "echo IMAGE_NAME=${IMAGE_NAME}"
+        sh "echo APP_URL=${APP_URL}"
       }
     }
   }
