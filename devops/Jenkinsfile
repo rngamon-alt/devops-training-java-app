@@ -87,8 +87,7 @@ pipeline {
       steps {
         echo "Job: ${env.JOB_NAME}"
         echo "Build: ${env.BUILD_NUMBER}"
-      }
-      steps {
+        
         echo "Imagen: ${env.IMAGE_NAME}"
         echo "URL App: ${env.APP_URL}"
 
