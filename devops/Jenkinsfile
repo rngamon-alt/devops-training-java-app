@@ -39,7 +39,7 @@ pipeline {
         }
       }
     }
-    stage('Test') {      
+    stage('Test') {
       steps {
         script {
           runInDocker('devops/ci:latest') {
@@ -70,30 +70,29 @@ pipeline {
 
           sh "docker compose -p ${composeProject} up -d"
           sh "sleep 5"
-          sh "docker compose -p ${composeProject} logs app"
-          sh "docker compose -p ${composeProject} down --volumes"
+          sh "docker compose -p ${composeProject} logs app"          
         }
-        post {
-          always {
-            echo "Cleaning resources..."
-            sh "docker compose -p ${composeProject} down --volumes || true"
-            sh "docker rmi ${IMAGE_NAME} || true"
-          }
-          success {
-            echo "SUCCESS"
-          }
-          failure {
-            echo "FAILURE"
-            sh "docker compose -p ${composeProject} logs || true"
-          }
+	  }	
+      post {
+        always {
+          echo "Cleaning resources..."
+          sh "docker compose -p ${composeProject} down --volumes || true"
+          sh "docker rmi ${IMAGE_NAME} || true"
+        }
+        success {
+          echo "SUCCESS"
+        }
+        failure {
+          echo "FAILURE"
+          sh "docker compose -p ${composeProject} logs || true"
         }
       }
-    }
+    }    
     stage('Info') {
       steps {
         echo "Job: ${env.JOB_NAME}"
         echo "Build: ${env.BUILD_NUMBER}"
-        
+
         echo "Imagen: ${env.IMAGE_NAME}"
         echo "URL App: ${env.APP_URL}"
 
