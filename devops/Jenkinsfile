@@ -21,13 +21,13 @@ pipeline {
     booleanParam(name: 'RUN_CD', defaultValue: false, description: 'Ejecutar CD')
   }
   environment {
-    IMAGE_NAME = "mi-imagen:${BUILD_NUMBER}"
+    IMAGE_NAME = "devops/ci:latest"
     APP_URL    = "http://localhost:5001/"
   }
   stages {
     stage('Build CI Image') {
       steps {
-        sh 'docker build --build-arg VERSION=1.0.0 -t devops/ci:latest -f devops/ci.Dockerfile .'
+        sh 'docker build --build-arg VERSION=1.0.0 -t ${IMAGE_NAME} -f devops/ci.Dockerfile .'
       }
     }
     stage('Lint') {
