@@ -9,7 +9,9 @@
 pipeline {
   // `agent any` = el pipeline se ejecuta en cualquier nodo/agente disponible.
   agent any
-
+  parameters {
+    booleanParam(name: 'RUN_CD', defaultValue: false, description: 'Ejecutar CD')
+  }
   stages {
     stage('Build CI Image') {
       steps {
@@ -27,11 +29,6 @@ pipeline {
       }
     }
     stage('Test') {
-      /*
-        `agent` dentro de un stage permite que SOLO ese stage se ejecute en un contexto concreto.
-        En este caso, usamos Docker como capa de virtualizacion: los comandos se ejecutan dentro
-        de un contenedor temporal.
-      */
       agent {
         docker {
           image 'devops/ci:latest'
@@ -41,6 +38,34 @@ pipeline {
         sh 'mvn test'
       }
     }
+    stage('CD') {
+      when {
+        anyOf {
+          expression { return params.RUN_CD }
+            branch 'develop'
+            branch 'master'
+          }
+        }
+            script {
+              // =========================
+              // 6.2 - Determinar entorno
+              // =========================
+              env.DEPLOY_ENV = (env.BRANCH_NAME == 'master') ? 'PRO' : 'DEV'
+
+              echo "Deploying to ${env.DEPLOY_ENV}"
+              echo "RUN_CD=${params.RUN_CD}, branch=${env.BRANCH_NAME}"
+
+              def composeProject = (env.DEPLOY_ENV == 'PRO') ? 'pro' : 'dev'
+
+              try {
+                sh 'docker compose up -d'
+                sh 'sleep 5'
+                sh 'docker compose logs app'
+              } finally {
+                sh 'docker compose down --volumes'
+              }
+          }
+        }
     stage('Info') {
       steps {
         echo "Job: ${env.JOB_NAME}"
