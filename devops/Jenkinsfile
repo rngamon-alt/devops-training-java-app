@@ -56,6 +56,11 @@ pipeline {
             branch 'master'
           }
         }
+      environment {
+        // Variables dependientes de la rama
+        DEPLOY_ENV = "${(env.BRANCH_NAME == 'master') ? 'PRO' : 'DEV'}"
+        COMPOSE_PROJECT = "${(env.BRANCH_NAME == 'master') ? 'pro' : 'dev'}"
+      }
       steps {
         echo "CD habilitado: RUN_CD=${params.RUN_CD}, branch=${env.BRANCH_NAME}"
         echo "Deploying image: ${env.IMAGE_NAME}"
@@ -66,17 +71,17 @@ pipeline {
           echo "Deploying to ${env.DEPLOY_ENV}"
           echo "RUN_CD=${params.RUN_CD}, branch=${env.BRANCH_NAME}"
 
-          def composeProject = (env.DEPLOY_ENV == 'PRO') ? 'pro' : 'dev'
+          //def composeProject = (env.DEPLOY_ENV == 'PRO') ? 'pro' : 'dev'
 
-          sh "docker compose -p ${composeProject} up -d"
+          sh "docker compose -p ${COMPOSE_PROJECT} up -d"
           sh "sleep 5"
-          sh "docker compose -p ${composeProject} logs app"          
+          sh "docker compose -p ${COMPOSE_PROJECT} logs app"          
         }
 	  }	
       post {
         always {
           echo "Cleaning resources..."
-          sh "docker compose -p ${composeProject} down --volumes || true"
+          sh "docker compose -p ${COMPOSE_PROJECT} down --volumes || true"
           sh "docker rmi ${IMAGE_NAME} || true"
         }
         success {
@@ -84,7 +89,7 @@ pipeline {
         }
         failure {
           echo "FAILURE"
-          sh "docker compose -p ${composeProject} logs || true"
+          sh "docker compose -p ${COMPOSE_PROJECT} logs || true"
         }
       }
     }    
