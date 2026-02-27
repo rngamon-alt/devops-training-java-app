@@ -78,13 +78,6 @@ jobs:
           echo "RUN_CD = ${{ inputs.RUN_CD }}"
           echo "DEPLOY_ENV = ${{ inputs.DEPLOY_ENV }}"
 
-      #Install dependencies and Lint
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y make
-          pip install -r requirements.txt
-
       #- name: Lint
       #  run: |
       #    make lint
