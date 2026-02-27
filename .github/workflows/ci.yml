@@ -27,7 +27,7 @@ on:
 
 # Variables de entorno a nivel de workflow
 env:
-  IMAGE_NAME: "python:3.6-slim" #"devops/ci:latest"
+  IMAGE_NAME: "maven:3.8.6-openjdk-11-slim" #"devops/ci:latest"
   APP_URL: "http://localhost:5001/"
 jobs:
   dummy:
