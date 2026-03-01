@@ -18,7 +18,7 @@ pipeline {
   // Variables de entorno globales accesibles en todos los stages
   environment {
     IMAGE_NAME = "devops/ci:latest"
-    APP_URL    = "http://localhost:8080/hello"
+    APP_URL    = "http://localhost:8084/hello"
   }
   stages {
 	// Stage 1: Construcción de la imagen CI
@@ -60,14 +60,13 @@ pipeline {
       environment {
         // Variables dependientes de la rama
         DEPLOY_ENV = "${(env.BRANCH_NAME == 'master') ? 'PRO' : 'DEV'}"
-        COMPOSE_PROJECT = "${(env.BRANCH_NAME == 'master') ? 'pro' : 'dev'}"
+        COMPOSE_PROJECT = "${(env.BRANCH_NAME == 'master') ? 'pro' : 'dev'}"		
       }
       steps {
         echo "CD habilitado: RUN_CD=${params.RUN_CD}, branch=${env.BRANCH_NAME}"
         echo "Deploying image: ${env.IMAGE_NAME}"
         echo "Application URL: ${env.APP_URL}"
         script {
-          env.DEPLOY_ENV = (env.BRANCH_NAME == 'master') ? 'PRO' : 'DEV'
           echo "Deploying to ${env.DEPLOY_ENV}"
           echo "RUN_CD=${params.RUN_CD}, branch=${env.BRANCH_NAME}"
 
@@ -76,7 +75,22 @@ pipeline {
           sh "docker compose -p ${COMPOSE_PROJECT} up -d"
           sh "sleep 5"
           // sh "docker compose -p ${COMPOSE_PROJECT} logs app"          
-		  sh "docker compose -p ${COMPOSE_PROJECT} exec -T app curl -f http://localhost:8080/hello"
+		  sh "docker compose -p ${COMPOSE_PROJECT} up -d"
+		  
+		  // Espera hasta que la app responda
+          sh """
+          for i in {1..10}; do
+            if curl -s ${env.APP_URL}; then
+              echo "App is up!"
+              break
+            fi
+            echo "Waiting for app to start..."
+            sleep 2
+          done
+          """
+	      
+          // Comprobación final con curl
+          sh "curl -f ${env.APP_URL}"
         }
 	  }	
 	  // Hooks post del stage CD
@@ -110,3 +124,4 @@ pipeline {
     }
   }// fin stages
 }// fin pipeline
+	
