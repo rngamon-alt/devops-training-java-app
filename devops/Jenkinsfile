@@ -16,7 +16,7 @@ pipeline {
   // Variables de entorno globales accesibles en todos los stages
   environment {
     IMAGE_NAME = "devops/ci:latest"
-    APP_URL    = "http://localhost:8084/hello"
+    APP_URL    = http://localhost:8080/hello"
   }
   stages {
 	// Stage 1: Construcción de la imagen CI
@@ -74,7 +74,7 @@ pipeline {
           sh "docker compose -p ${COMPOSE_PROJECT} up -d"
           sh "sleep 5"
           // sh "docker compose -p ${COMPOSE_PROJECT} logs app"          
-		  sh "curl -f ${env.APP_URL}"
+		  sh "docker compose -p ${COMPOSE_PROJECT} exec -T app curl -f http://localhost:8080/hello"
         }
 	  }	
 	  // Hooks post del stage CD
