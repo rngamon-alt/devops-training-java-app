@@ -16,7 +16,7 @@ pipeline {
   // Variables de entorno globales accesibles en todos los stages
   environment {
     IMAGE_NAME = "devops/ci:latest"
-    APP_URL    = http://localhost:8080/hello"
+    APP_URL    = "http://localhost:8080/hello"
   }
   stages {
 	// Stage 1: Construcción de la imagen CI
