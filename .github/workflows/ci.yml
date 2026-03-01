@@ -47,11 +47,11 @@ jobs:
 
       # 2️⃣ Lint dentro del contenedor
       - name: Run Lint
-        run: docker run --rm $IMAGE_NAME make lint
+        run: docker run --rm -v ${{ github.workspace }}:/app -w /app $IMAGE_NAME make lint
 
       # 3️⃣ Tests dentro del contenedor
       - name: Run Tests
-        run: docker run --rm $IMAGE_NAME mvn test
+        run: docker run --rm -v ${{ github.workspace }}:/app -w /app $IMAGE_NAME mvn test
 
       # 4️⃣ CD (solo develop/master o RUN_CD=true)
       - name: Simulated CD
