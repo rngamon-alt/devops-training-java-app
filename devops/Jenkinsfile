@@ -1,10 +1,12 @@
 // Función para ejecutar cualquier bloque dentro del contenedor Docker
-def runInDocker(String image, Closure body) {    
-	docker.image(image).inside("-v ${pwd()}:/app -w /app") {
-    body()
+def runInDocker(String image, Closure body) {
+    docker.image(image).inside("-v ${pwd()}:/app -w /app") {
+        withEnv(["PATH=/usr/share/maven/bin:$PATH"]) {
+            body()
+        }
+    }
 }
 
-}
 
 pipeline {
   // `agent any` = el pipeline se ejecuta en cualquier nodo/agente disponible.
