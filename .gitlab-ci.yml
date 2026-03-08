@@ -1,0 +1,71 @@
+stages:
+  - info
+  - build
+  - lint
+  - test
+  - cd
+
+variables:
+  IMAGE_NAME: devops/ci:latest
+  APP_URL: "http://localhost:8084/hello"
+
+info:
+  stage: info
+  image: alpine:3.19
+  script:
+    - >
+      echo "Repo: $CI_PROJECT_PATH"
+    - >
+      echo "Branch: $CI_COMMIT_BRANCH"
+    - >
+      echo "SHA: $CI_COMMIT_SHA"
+    - >
+      echo "Runner: $CI_RUNNER_DESCRIPTION"
+
+build-image:
+  stage: build
+  image: docker:24
+  services:
+    - docker:24-dind
+  script:
+    - docker build -t $IMAGE_NAME -f devops/ci.Dockerfile .
+
+lint:
+  stage: lint
+  image: docker:24
+  services:
+    - docker:24-dind
+  script:
+    - docker run --rm -v $CI_PROJECT_DIR:/app -w /app $IMAGE_NAME make lint
+
+tests:
+  stage: test
+  image: docker:24
+  services:
+    - docker:24-dind
+  script:
+    - docker run --rm -v $CI_PROJECT_DIR:/app -w /app $IMAGE_NAME mvn test
+
+deploy:
+  stage: cd
+  image: docker:24
+  services:
+    - docker:24-dind
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+    - if: '$CI_COMMIT_BRANCH == "master"'
+  script:
+    - echo "Deploying image $IMAGE_NAME"
+    - docker compose up -d
+    - sleep 5
+    - curl -f $APP_URL
+
+cleanup:
+  stage: cd
+  image: docker:24
+  services:
+    - docker:24-dind
+  when: always
+  script:
+    - docker compose down --volumes || true
+    - docker rmi $IMAGE_NAME || true
