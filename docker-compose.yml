@@ -22,6 +22,9 @@ services:
     container_name: java_app
     ports:
       - 8084:8080
+    environment:
+      - SERVER_ADDRESS=0.0.0.0
+      - SERVER_PORT=8080
 
   # sonarqube:
   #   image: sonarqube:9.9.0-community
@@ -53,4 +56,5 @@ services:
   #   networks:
   #     java-project-net:
   #       aliases: 
+
   #         - sonardb

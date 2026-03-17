@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['develop','master']
+  workflow_dispatch:
+    inputs:
+      RUN_CD:
+        description: 'Run CD stage'
+        required: false
+        default: 'false'
+      DEPLOY_ENV:
+        description: 'Deployment environment'
+        required: false
+        type: choice
+        options:
+          - DEV
+          - PRO
+        default: DEV
+
+env:
+  IMAGE_NAME: devops/ci:latest
+  APP_URL: "http://localhost:8084/hello"
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Info
+        run: |
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit SHA: ${{ github.sha }}"
+          echo "Runner OS: ${{ runner.os }}"
+          echo "Runner Name: ${{ runner.name }}"
+          echo "RUN_CD=${{ inputs.RUN_CD }}"
+          echo "DEPLOY_ENV=${{ inputs.DEPLOY_ENV }}"
+
+      # 1️⃣ Build imagen CI (igual que Jenkins)
+      - name: Build CI Docker image
+        run: docker build -t $IMAGE_NAME -f devops/ci.Dockerfile .
+
+      # 2️⃣ Lint dentro del contenedor
+      - name: Run Lint
+        run: docker run --rm -v ${{ github.workspace }}:/app -w /app $IMAGE_NAME make lint
+
+      # 3️⃣ Tests dentro del contenedor
+      - name: Run Tests
+        run: docker run --rm -v ${{ github.workspace }}:/app -w /app $IMAGE_NAME mvn test
+
+      # 4️⃣ CD (solo develop/master o RUN_CD=true)
+      - name: Simulated CD
+        if: |
+          (github.ref_name == 'develop' || github.ref_name == 'master')
+          && (github.event_name != 'workflow_dispatch' || inputs.RUN_CD == 'true')
+        run: |
+          echo "Deploying image: $IMAGE_NAME"
+          docker compose up -d
+          sleep 5
+          curl -f $APP_URL
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker compose down --volumes || true
+          docker rmi $IMAGE_NAME || true
