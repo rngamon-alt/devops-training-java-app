@@ -1,10 +1,7 @@
-# Práctica 5 - Azure DevOps Pipelines (dummy)
-#
-# Punto de partida: pipeline mínimo para validar que Azure DevOps lee el repo de GitHub
-# y ejecuta un YAML sin errores.
-
+# Práctica 5 - Azure DevOps Pipelines 
+# Ejercicio 1 - Estructura mínima
 trigger: 
-- main
+- master
 
 pool:
   vmImage: ubuntu-latest
