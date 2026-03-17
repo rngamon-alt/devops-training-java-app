@@ -61,6 +61,7 @@ steps:
     echo "Entorno seleccionado: ${{ parameters.DEPLOY_ENV }}"
   displayName: "Build"
 
+#Se ejecuta si el build ha ido ok y si RUN_CD es true
 - script: |
     echo "Desplegando en ${{ parameters.DEPLOY_ENV }}"
   displayName: "CD Step"
