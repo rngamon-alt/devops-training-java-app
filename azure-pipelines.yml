@@ -1,5 +1,10 @@
 # Práctica 5 - Azure DevOps Pipelines 
-# Ejercicio 6 - Build de imagen docker en CI
+# Ejercicio 7 - CD condicionado por rama + parametro RUN_CD
+
+parameters:
+- name: RUN_CD
+  type: boolean
+  default: false
 
 trigger:
 - develop
@@ -9,78 +14,59 @@ pr:
 - develop
 - master
 
-pool:
-  vmImage: ubuntu-latest
+# -------------------
+# STAGE 1 - CI
+# -------------------
+stages:
+- stage: CI
+  displayName: "CI Stage"
+  jobs:
 
-variables:
-- group: shared-config   # si tenemos variable group
-# Variables secretas como REGISTRY_USER y REGISTRY_PASSWORD se configuran en Azure DevOps Library → Pipeline Variables
+    - job: CI_Java
+      displayName: "CI - Java (Maven)"
+      container: maven:3.8.6-openjdk-11-slim
+      steps:
+        - checkout: self
+        - script: make lint
+          displayName: "Compile Check (Lint)"
+        - script: make test
+          displayName: "Run Unit Tests"
 
-jobs:
+    - job: Docker_Build
+      displayName: "Build Docker Image"
+      dependsOn: CI_Java
+      condition: succeeded()
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+        - checkout: self
+        - script: docker build -f devops/Dockerfile -t myapp:$(Build.BuildId) .
+          displayName: "Docker Build"
 
 # -------------------
-# JOB 1 - CI Java
+# STAGE 2 - CD
 # -------------------
-- job: CI_Java
-  displayName: "CI - Java (Maven)"
-
-  container: maven:3.8.6-openjdk-11-slim
-
-  steps:
-  - checkout: self
-
-  - script: |
-      echo "Java version:"
-      java -version
-      echo "Maven version:"
-      mvn -version
-    displayName: "Check Java & Maven versions"
-
-  - script: make lint
-    displayName: "Compile Check (Lint)"
-
-  - script: make test
-    displayName: "Run Unit Tests"
-
-
-# -------------------
-# JOB 2 - Docker Build
-# -------------------
-- job: Docker_Build
-  displayName: "Build Docker Image"
-  dependsOn: CI_Java
-  condition: succeeded()
-
-  pool:
-    vmImage: ubuntu-latest
-
-  steps:
-  - checkout: self
-
-  - script: |
-      docker version
-      docker build \
-        -f devops/Dockerfile \
-        -t myapp:$(Build.BuildId) \
-        .
-    displayName: "Docker Build (App Image)"
-
-# -------------------
-# JOB 3 - Docker Push (opcional)
-# -------------------
-- job: Docker_Push
-  displayName: "Push Docker Image to Registry"
-  dependsOn: Docker_Build
-  condition: succeeded()
-
-  pool:
-    vmImage: ubuntu-latest
-
-  steps:
-  - checkout: self
-
-  - script: |
-      echo "$(REGISTRY_PASSWORD)" | docker login -u "$(REGISTRY_USER)" --password-stdin myregistry.io
-      docker tag myapp:$(Build.BuildId) myregistry.io/myapp:$(Build.BuildId)
-      docker push myregistry.io/myapp:$(Build.BuildId)
-    displayName: "Docker Push to Registry"
+- stage: CD
+  displayName: "Deploy Stage"
+  condition: |
+    and(
+      succeeded(),
+      eq('${{ parameters.RUN_CD }}', 'true'),
+      or(
+        eq(variables['Build.SourceBranchName'], 'develop'),
+        eq(variables['Build.SourceBranchName'], 'master')
+      )
+    )
+  jobs:
+    - job: Deploy
+      displayName: "Deploy Job"
+      pool:
+        vmImage: ubuntu-latest
+      steps:
+        - script: |
+            if [ "$(Build.SourceBranchName)" = "develop" ]; then
+              echo "Deploying to DEV environment..."
+            elif [ "$(Build.SourceBranchName)" = "master" ]; then
+              echo "Deploying to PRO environment..."
+            fi
+          displayName: "Deploy based on branch"
