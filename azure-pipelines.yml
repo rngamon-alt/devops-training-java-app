@@ -1,14 +1,26 @@
 # Práctica 5 - Azure DevOps Pipelines 
-# Ejercicio 5 - CI por proyecto
+# Ejercicio 6 - Build de imagen docker en CI
 
 trigger:
+- develop
+- master
+
+pr:
 - develop
 - master
 
 pool:
   vmImage: ubuntu-latest
 
+variables:
+- group: shared-config   # si tenemos variable group
+# Variables secretas como REGISTRY_USER y REGISTRY_PASSWORD se configuran en Azure DevOps Library → Pipeline Variables
+
 jobs:
+
+# -------------------
+# JOB 1 - CI Java
+# -------------------
 - job: CI_Java
   displayName: "CI - Java (Maven)"
 
@@ -29,3 +41,46 @@ jobs:
 
   - script: make test
     displayName: "Run Unit Tests"
+
+
+# -------------------
+# JOB 2 - Docker Build
+# -------------------
+- job: Docker_Build
+  displayName: "Build Docker Image"
+  dependsOn: CI_Java
+  condition: succeeded()
+
+  pool:
+    vmImage: ubuntu-latest
+
+  steps:
+  - checkout: self
+
+  - script: |
+      docker version
+      docker build \
+        -f devops/Dockerfile \
+        -t myapp:$(Build.BuildId) \
+        .
+    displayName: "Docker Build (App Image)"
+
+# -------------------
+# JOB 3 - Docker Push (opcional)
+# -------------------
+- job: Docker_Push
+  displayName: "Push Docker Image to Registry"
+  dependsOn: Docker_Build
+  condition: succeeded()
+
+  pool:
+    vmImage: ubuntu-latest
+
+  steps:
+  - checkout: self
+
+  - script: |
+      echo "$(REGISTRY_PASSWORD)" | docker login -u "$(REGISTRY_USER)" --password-stdin myregistry.io
+      docker tag myapp:$(Build.BuildId) myregistry.io/myapp:$(Build.BuildId)
+      docker push myregistry.io/myapp:$(Build.BuildId)
+    displayName: "Docker Push to Registry"
