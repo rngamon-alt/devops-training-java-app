@@ -3,15 +3,15 @@
 # Punto de partida: pipeline mínimo para validar que Azure DevOps lee el repo de GitHub
 # y ejecuta un YAML sin errores.
 
-trigger: none
-pr: none
+trigger: 
+- main
 
 pool:
   vmImage: ubuntu-latest
 
 steps:
-  - script: |
-      echo "Repo:   $(Build.Repository.Name)"
-      echo "Branch: $(Build.SourceBranchName)"
-      echo "SHA:    $(Build.SourceVersion)"
-    displayName: "Info (dummy)"
+- script: |
+    echo "Repository: $(Build.Repository.Name)"
+    echo "Branch:     $(Build.SourceBranch)"
+    echo "Commit:     $(Build.SourceVersion)"
+  displayName: "Mostrar variables del build"
