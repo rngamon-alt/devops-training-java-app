@@ -1,7 +1,16 @@
 # Práctica 5 - Azure DevOps Pipelines 
-# Ejercicio 1 - Estructura mínima
+# Ejercicio 2 - Triggers
 trigger: 
-- master
+  branches:
+    include:
+      - develop
+      - master
+
+pr:
+  branches:
+    include:
+      - develop
+      - master
 
 pool:
   vmImage: ubuntu-latest
