@@ -1,14 +1,31 @@
 # Práctica 5 - Azure DevOps Pipelines 
-# Ejercicio 3 - Variables y Secretos
+# Ejercicio 4 - Parámetros y ejecución manual (Build with Parameters)
 
-trigger: 
-- develop
-- master
+trigger: none   # Solo ejecución manual
+pr: none
 
-pr:
-- develop
-- master
+#trigger: 
+#- develop
+#- master
 
+#pr:
+#- develop
+#- master
+
+parameters:
+- name: RUN_CD
+  displayName: "Ejecutar CD"
+  type: boolean
+  default: false
+
+- name: DEPLOY_ENV
+  displayName: "Entorno de despliegue"
+  type: string
+  default: DEV
+  values:
+  - DEV
+  - PRO
+  
 pool:
   vmImage: ubuntu-latest
 
@@ -38,3 +55,13 @@ steps:
     # Simulación de login
     docker login -u $(REGISTRY_USER) -p $(REGISTRY_PASSWORD) myregistry.io
   displayName: "Usar secretos sin imprimirlos"
+
+- script: |
+    echo "Build ejecutado"
+    echo "Entorno seleccionado: ${{ parameters.DEPLOY_ENV }}"
+  displayName: "Build"
+
+- script: |
+    echo "Desplegando en ${{ parameters.DEPLOY_ENV }}"
+  displayName: "CD Step"
+  condition: and(succeeded(), eq('${{ parameters.RUN_CD }}', 'true'))
