@@ -1,19 +1,21 @@
 # Práctica 5 - Azure DevOps Pipelines 
-# Ejercicio 2 - Triggers
+# Ejercicio 3 - Variables y Secretos
+
 trigger: 
-  branches:
-    include:
-      - develop
-      - master
+- develop
+- master
 
 pr:
-  branches:
-    include:
-      - develop
-      - master
+- develop
+- master
 
 pool:
   vmImage: ubuntu-latest
+
+#Previamente decidir usar variables en tu pipeline o variables de grupo (varios pipeline)
+# Si variables de grupo: añadir variable en Pipelines>Library>Variable group, con name shared-config
+variables:
+- group: shared-config
 
 steps:
 - script: |
@@ -21,3 +23,18 @@ steps:
     echo "Branch:     $(Build.SourceBranch)"
     echo "Commit:     $(Build.SourceVersion)"
   displayName: "Mostrar variables del build"
+
+#Previamente crear variables en tu Pipeline
+- script: |
+    echo "Image name: $(IMAGE_NAME)"
+    echo "App URL: $(APP_URL)"
+  displayName: "Mostrar variables normales"
+
+#Previamente crear secretos
+- script: |
+    echo "Login en registry..."
+    echo "Usuario definido (no se imprime password)"
+
+    # Simulación de login
+    docker login -u $(REGISTRY_USER) -p $(REGISTRY_PASSWORD) myregistry.io
+  displayName: "Usar secretos sin imprimirlos"
