@@ -1,68 +1,31 @@
 # Práctica 5 - Azure DevOps Pipelines 
-# Ejercicio 4 - Parámetros y ejecución manual (Build with Parameters)
+# Ejercicio 5 - CI por proyecto
 
-trigger: none   # Solo ejecución manual
-pr: none
+trigger:
+- develop
+- master
 
-#trigger: 
-#- develop
-#- master
-
-#pr:
-#- develop
-#- master
-
-parameters:
-- name: RUN_CD
-  displayName: "Ejecutar CD"
-  type: boolean
-  default: false
-
-- name: DEPLOY_ENV
-  displayName: "Entorno de despliegue"
-  type: string
-  default: DEV
-  values:
-  - DEV
-  - PRO
-  
 pool:
   vmImage: ubuntu-latest
 
-#Previamente decidir usar variables en tu pipeline o variables de grupo (varios pipeline)
-# Si variables de grupo: añadir variable en Pipelines>Library>Variable group, con name shared-config
-variables:
-- group: shared-config
+jobs:
+- job: CI_Java
+  displayName: "CI - Java (Maven)"
 
-steps:
-- script: |
-    echo "Repository: $(Build.Repository.Name)"
-    echo "Branch:     $(Build.SourceBranch)"
-    echo "Commit:     $(Build.SourceVersion)"
-  displayName: "Mostrar variables del build"
+  container: maven:3.8.6-openjdk-11-slim
 
-#Previamente crear variables en tu Pipeline
-- script: |
-    echo "Image name: $(IMAGE_NAME)"
-    echo "App URL: $(APP_URL)"
-  displayName: "Mostrar variables normales"
+  steps:
+  - checkout: self
 
-#Previamente crear secretos
-- script: |
-    echo "Login en registry..."
-    echo "Usuario definido (no se imprime password)"
+  - script: |
+      echo "Java version:"
+      java -version
+      echo "Maven version:"
+      mvn -version
+    displayName: "Check Java & Maven versions"
 
-    # Simulación de login
-    docker login -u $(REGISTRY_USER) -p $(REGISTRY_PASSWORD) myregistry.io
-  displayName: "Usar secretos sin imprimirlos"
+  - script: make lint
+    displayName: "Compile Check (Lint)"
 
-- script: |
-    echo "Build ejecutado"
-    echo "Entorno seleccionado: ${{ parameters.DEPLOY_ENV }}"
-  displayName: "Build"
-
-#Se ejecuta si el build ha ido ok y si RUN_CD es true
-- script: |
-    echo "Desplegando en ${{ parameters.DEPLOY_ENV }}"
-  displayName: "CD Step"
-  condition: and(succeeded(), eq('${{ parameters.RUN_CD }}', 'true'))
+  - script: make test
+    displayName: "Run Unit Tests"
